@@ -24,12 +24,7 @@ app.set('query parser', (query) => queryString.parse(query));
 app.use(xssClean);
 
 app.use((req, res, next) => {
-  next(
-    new AppError(
-      `Can't find this route '${req.originalUrl}' on this server!`,
-      404,
-    ),
-  );
+  next(new AppError(`المسار ${req.originalUrl} غير موجود`, 404));
 });
 
 app.use(globalErrorHandler);

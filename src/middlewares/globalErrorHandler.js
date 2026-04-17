@@ -1,8 +1,7 @@
 import AppError from '../utils/error/appError.js';
 
 const handleCastErrorDB = (err) => {
-  const message = `Invalid ${err.path}: ${err.value}`;
-
+  const message = `قيمة غير صحيحة للحقل ${err.path}: ${err.value}`;
   return new AppError(message, 400);
 };
 
@@ -10,23 +9,27 @@ const handleDuplicateErrorDB = (err) => {
   const field = Object.keys(err.keyValue)[0];
   const value = err.keyValue[field];
 
-  const message = `Duplicate ${field}: "${value}". Please use another value.`;
-
+  const message = `القيمة "${value}" مستخدمة بالفعل في ${field}`;
   return new AppError(message, 400);
 };
 
 const handleValidationErrorDB = (err) => {
-  const errors = Object.values(err.errors).map((value) => value.message);
-  const message = `Invalid input data. ${errors.join('. ')}`;
-
+  const errors = Object.values(err.errors).map((v) => v.message);
+  const message = `بيانات غير صالحة: ${errors.join(' - ')}`;
   return new AppError(message, 400);
 };
 
 const handlejwtError = () =>
-  new AppError('Invalid or expired token, please log in again.', 401);
+  new AppError(
+    'التوكن غير صالح أو انتهت صلاحيته، يرجى تسجيل الدخول مرة أخرى',
+    401,
+  );
 
 const handlejwtExpiredError = () =>
-  new AppError('Invalid or expired token, please log in again.', 401);
+  new AppError(
+    'التوكن غير صالح أو انتهت صلاحيته، يرجى تسجيل الدخول مرة أخرى',
+    401,
+  );
 
 const sendErrorDev = (err, req, res) => {
   res.status(err.statusCode).json({
@@ -51,7 +54,7 @@ const sendErrorProd = (err, req, res) => {
   // 2) Send generic message
   return res.status(500).json({
     status: 'error',
-    message: 'Please try again later.',
+    message: 'حدث خطأ غير متوقع، حاول مرة أخرى لاحقًا',
   });
 };
 
