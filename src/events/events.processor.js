@@ -1,9 +1,10 @@
 import pool from '../db/pool.js';
+import * as matchingService from '../services/matching.service.js';
 
 const handle = async (eventType, payload) => {
   switch (eventType) {
     case 'EMBEDDING_SEARCH':
-      console.log('[EventProcessor] EMBEDDING_SEARCH received');
+      await matchingService.processReport(payload);
       break;
     case 'MATCH_CONFIRMATION':
       console.log('[EventProcessor] MATCH_CONFIRMATION received');
