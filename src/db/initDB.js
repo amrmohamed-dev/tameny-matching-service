@@ -1,7 +1,7 @@
 import pool from './pool.js';
 
-const initDB = () => {
-  pool
+const initDB = async () => {
+  await pool
     .query('SELECT 1')
     .then(() => console.log('DB connected successfully'))
     .catch((err) => {
