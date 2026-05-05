@@ -10,7 +10,7 @@ const registerConnectionHandlers = (socket) => {
     socketId: socket.id,
   });
 
-  socket.on('disconnected', (reason) => {
+  socket.on('disconnect', (reason) => {
     logSocketInfo('disconnected', {
       userId,
       socketId: socket.id,
