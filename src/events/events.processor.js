@@ -10,7 +10,7 @@ const handle = async (eventType, payload) => {
       console.log('[EventProcessor] MATCH_CONFIRMATION received');
       break;
     default:
-      console.log('[EventProcessor] Unknown event');
+      console.warn('[EventProcessor] Unknown event:', eventType);
       break;
   }
 };
@@ -21,8 +21,10 @@ const claimPendingEvents = async () => {
     SET event_status = 'PROCESSING'
     WHERE id IN (
       SELECT id FROM realtime_events
-      WHERE event_status = 'PENDING'
+      WHERE event_status IN ('PENDING', 'FAILED')
+        AND retry_count < 5
       ORDER BY created_at
+      FOR UPDATE SKIP LOCKED
       LIMIT 10
     )
     RETURNING *;
@@ -42,15 +44,26 @@ const markDone = async (id) => {
   );
 };
 
+const MAX_RETRIES = 5;
+
 const markFailed = async (id) => {
   await pool.query(
     `
     UPDATE realtime_events
-    SET event_status = 'FAILED',
-        retry_count = retry_count + 1
+    SET
+      retry_count = retry_count + 1,
+      
+      event_status = 
+        CASE
+          WHEN retry_count + 1 >= $2
+          THEN 'DEAD'
+
+          ELSE 'FAILED'
+        END
+
     WHERE id = $1
   `,
-    [id],
+    [id, MAX_RETRIES],
   );
 };
 
@@ -66,6 +79,11 @@ const processPendingEvents = async () => {
           await handle(event.event_type, event.payload);
           await markDone(event.id);
         } catch (err) {
+          console.error('[EventProcessor] Event failed:', {
+            id: event.id,
+            eventType: event.event_type,
+            message: err.message,
+          });
           await markFailed(event.id);
         }
       }),
