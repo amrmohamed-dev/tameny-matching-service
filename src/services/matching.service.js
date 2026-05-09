@@ -10,6 +10,7 @@ const getEmbedding = async (reportId) => {
     SELECT embedding
     FROM report_face_embeddings
     WHERE report_id = $1
+      AND status = 'ACTIVE'
     LIMIT 1
     `,
     [reportId],
@@ -19,6 +20,8 @@ const getEmbedding = async (reportId) => {
 };
 
 const findMatches = async (embedding, reportId, searchType, threshold) => {
+  const limit = Number(process.env.MATCH_LIMIT) || 5;
+
   const additionSelect =
     searchType === 'MISSING'
       ? `(re.payload->>'reporterUserId')::bigint AS missing_user_id,`
@@ -41,11 +44,12 @@ const findMatches = async (embedding, reportId, searchType, threshold) => {
        AND re.event_type = 'EMBEDDING_SEARCH'
 
       WHERE rfe.report_id != $2
+      AND rfe.status = 'ACTIVE'
         AND rfe.report_type = $3
         AND (rfe.embedding <=> $1) < (1 - $4::double precision)
 
       ORDER BY rfe.embedding <=> $1 ASC
-      LIMIT 5
+      LIMIT ${limit}
     `,
     [embedding, reportId, searchType, threshold],
   );
@@ -117,7 +121,7 @@ const processReport = async (event) => {
 
     const searchType = reportType === 'MISSING' ? 'FOUND' : 'MISSING';
 
-    const threshold = 0.6;
+    const threshold = Number(process.env.MATCH_THRESHOLD) || 0.6;
     const matches = await findMatches(
       embedding,
       reportId,
