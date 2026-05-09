@@ -1,4 +1,5 @@
 import pool from '../db/pool.js';
+import * as socketService from './socket.service.js';
 
 const formatConfidencePercentage = (score) =>
   Number((score * 100).toFixed(1));
@@ -138,7 +139,7 @@ const processReport = async (event) => {
       const topConfidenceScore =
         formatConfidencePercentage(matches[0]?.confidenceScore) || 0;
 
-      console.log('[MATCH_FOUND:MISSING_REPORT]', {
+      socketService.emitMatchesFound({
         userId,
         reportId,
         totalMatches: matches.length,
@@ -157,7 +158,7 @@ const processReport = async (event) => {
         match.confidenceScore,
       );
 
-      return {
+      return socketService.emitMatchesFound({
         userId: match.missingUserId,
         reportId: match.reportId,
         totalMatches: 1,
@@ -175,13 +176,10 @@ const processReport = async (event) => {
             createdAt: match.createdAt,
           },
         ],
-      };
+      });
     });
 
-    console.log(
-      '[MATCH_FOUND:FOUND_REPORT]',
-      matchPayloads.filter(Boolean),
-    );
+    await Promise.all(matchPayloads.filter(Boolean));
   } catch (err) {
     console.error('[MatchingService] Error processing report:', err);
 
