@@ -68,26 +68,35 @@ const saveMatches = async (reportId, reportType, matches) => {
   matches.forEach((match, index) => {
     const baseIndex = index * 4;
 
-    const [missingId, foundId] =
+    const [missingReportId, foundReportId] =
       reportType === 'MISSING'
-        ? [reportId, match.report_id]
-        : [match.report_id, reportId];
+        ? [reportId, match.reportId]
+        : [match.reportId, reportId];
 
-    values.push(missingId, foundId, match.cosine_similarity, 'PENDING');
+    values.push(
+      missingReportId,
+      foundReportId,
+      match.confidenceScore,
+      'PENDING',
+    );
 
     placeholders.push(
       `($${baseIndex + 1}, $${baseIndex + 2},$${baseIndex + 3},$${baseIndex + 4})`,
     );
   });
 
-  await pool.query(
+  const result = await pool.query(
     `
       INSERT INTO potential_matches
       (missing_report_id, found_report_id, confidence_score, status)
       VALUES ${placeholders.join(',')}
+      ON CONFLICT (missing_report_id, found_report_id) DO NOTHING
+      RETURNING missing_report_id, found_report_id, confidence_score
     `,
     values,
   );
+
+  return result.rows;
 };
 
 const processReport = async (event) => {
@@ -109,7 +118,14 @@ const processReport = async (event) => {
 
     if (!matches?.length) return;
 
-    await saveMatches(reportId, reportType, matches);
+    const insertedMatches = await saveMatches(
+      reportId,
+      reportType,
+      matches,
+    );
+
+    if (!insertedMatches?.length) return;
+
   } catch (err) {
     console.error('[MatchingService] Error processing report:', err);
     throw err;
