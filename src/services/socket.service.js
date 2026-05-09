@@ -19,4 +19,18 @@ const emitMatchesFound = async ({
   });
 };
 
-export { emitMatchesFound };
+const emitMatchConfirmed = async ({
+  userId,
+  matchedReportId,
+  matchedPersonName,
+  matchedPersonImageUrl,
+}) => {
+  emitToUser(userId, SOCKET_EVENTS.MATCH_CONFIRMED, {
+    type: SOCKET_EVENTS.MATCH_CONFIRMED,
+    matchedReportId,
+    matchedPersonName,
+    matchedPersonImageUrl,
+  });
+};
+
+export { emitMatchesFound, emitMatchConfirmed };

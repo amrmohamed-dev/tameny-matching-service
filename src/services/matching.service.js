@@ -198,7 +198,7 @@ const confirmMatch = async (event) => {
 
     if (!foundUserId) return;
 
-    console.log('[MATCH_CONFIRMED]', {
+    socketService.emitMatchConfirmed({
       userId: foundUserId,
       matchedReportId,
       matchedPersonName,
