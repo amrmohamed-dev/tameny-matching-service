@@ -31,6 +31,28 @@ const createNotification = async ({
   return notification;
 };
 
+const createReportCreatedNotification = ({
+  userId,
+  reportId,
+  reportType,
+}) => {
+  const isMissingReport = reportType === 'MISSING';
+
+  return createNotification({
+    userId,
+    type: NOTIFICATION_TYPES.REPORT_CREATED,
+    title: isMissingReport
+      ? 'تم إنشاء بلاغ فقدان'
+      : 'تم إنشاء بلاغ العثور',
+
+    body: isMissingReport
+      ? 'تم إنشاء بلاغ الفقدان بنجاح، سنقوم بإشعارك عند العثور على تطابقات محتملة'
+      : 'تم إنشاء بلاغ العثور بنجاح، سنقوم بمقارنته مع بلاغات الفقدان الموجودة',
+
+    data: { reportId },
+  });
+};
+
 const createMatchFoundNotification = ({
   userId,
   reportId,
@@ -72,4 +94,8 @@ const createMatchConfirmedNotification = ({
     },
   });
 
-export { createMatchFoundNotification, createMatchConfirmedNotification };
+export {
+  createReportCreatedNotification,
+  createMatchFoundNotification,
+  createMatchConfirmedNotification,
+};

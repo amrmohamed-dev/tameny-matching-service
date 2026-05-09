@@ -2,6 +2,14 @@ import emitToUser from '../sockets/utils/emit.js';
 import SOCKET_EVENTS from '../sockets/utils/constants.js';
 import * as notificationService from './notification.service.js';
 
+const emitReportCreated = async ({ userId, reportId, reportType }) => {
+  await notificationService.createReportCreatedNotification({
+    userId,
+    reportId,
+    reportType,
+  });
+};
+
 const emitMatchesFound = async ({
   userId,
   reportId,
@@ -49,4 +57,4 @@ const emitMatchConfirmed = async ({
   });
 };
 
-export { emitMatchesFound, emitMatchConfirmed };
+export { emitReportCreated, emitMatchesFound, emitMatchConfirmed };

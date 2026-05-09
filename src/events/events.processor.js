@@ -1,11 +1,19 @@
 import pool from '../db/pool.js';
+import { emitReportCreated } from '../services/socket.service.js';
 import * as matchingService from '../services/matching.service.js';
 
 const handle = async (eventType, payload) => {
   switch (eventType) {
-    case 'EMBEDDING_SEARCH':
+    case 'EMBEDDING_SEARCH': {
+      const { reporterUserId, reportId, reportType } = payload;
+      await emitReportCreated({
+        userId: reporterUserId,
+        reportId,
+        reportType,
+      });
       await matchingService.processReport(payload);
       break;
+    }
     case 'MATCH_CONFIRMATION':
       await matchingService.confirmMatch(payload);
       break;
