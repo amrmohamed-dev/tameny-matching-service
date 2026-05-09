@@ -186,8 +186,29 @@ const processReport = async (event) => {
     throw err;
   }
 };
+
+const confirmMatch = async (event) => {
+  try {
+    const {
+      matchedReportId,
+      matchedPersonName,
+      matchedPersonImageUrl,
+      foundUserId,
+    } = event;
+
+    if (!foundUserId) return;
+
+    console.log('[MATCH_CONFIRMED]', {
+      userId: foundUserId,
+      matchedReportId,
+      matchedPersonName,
+      matchedPersonImageUrl,
+    });
+  } catch (err) {
+    console.error('[confirmMatch] Error:', err);
+
     throw err;
   }
 };
 
-export { processReport };
+export { processReport, confirmMatch };

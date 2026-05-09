@@ -7,7 +7,7 @@ const handle = async (eventType, payload) => {
       await matchingService.processReport(payload);
       break;
     case 'MATCH_CONFIRMATION':
-      console.log('[EventProcessor] MATCH_CONFIRMATION received');
+      await matchingService.confirmMatch(payload);
       break;
     default:
       console.warn('[EventProcessor] Unknown event:', eventType);
