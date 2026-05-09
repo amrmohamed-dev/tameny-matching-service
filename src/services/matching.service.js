@@ -14,28 +14,49 @@ const getEmbedding = async (reportId) => {
   return embeddingResult.rows[0]?.embedding;
 };
 
-const findMatches = async (
-  embedding,
-  reportId,
-  searchType,
-  threshold = 0.6,
-) => {
+const findMatches = async (embedding, reportId, searchType, threshold) => {
+  const additionSelect =
+    searchType === 'MISSING'
+      ? `(re.payload->>'reporterUserId')::bigint AS missing_user_id,`
+      : `re.payload->>'reportedPersonImageUrl' AS reported_person_image_url,
+        re.payload->>'reportedPersonName' AS reported_person_name,
+        re.payload->>'reportedPersonGender' AS reported_person_gender,`;
+
   const matches = await pool.query(
     `
-    SELECT 
-      report_id,
-      1 - (embedding <=> $1) AS cosine_similarity
-    FROM report_face_embeddings
-    WHERE report_id != $2
-      AND report_type = $3
-      AND (embedding <=> $1) < (1 - $4::double precision)
-    ORDER BY embedding <=> $1 ASC
-    LIMIT 5
-  `,
+      SELECT
+        rfe.report_id,
+        ${additionSelect}
+        1 - (rfe.embedding <=> $1) AS cosine_similarity,
+        re.created_at
+
+      FROM report_face_embeddings rfe
+
+      JOIN realtime_events re
+        ON (re.payload->>'reportId')::bigint = rfe.report_id
+       AND re.event_type = 'EMBEDDING_SEARCH'
+
+      WHERE rfe.report_id != $2
+        AND rfe.report_type = $3
+        AND (rfe.embedding <=> $1) < (1 - $4::double precision)
+
+      ORDER BY rfe.embedding <=> $1 ASC
+      LIMIT 5
+    `,
     [embedding, reportId, searchType, threshold],
   );
 
-  return matches.rows;
+  return matches.rows.map((match) => ({
+    reportId: Number(match.report_id),
+    confidenceScore: Number(match.cosine_similarity),
+    missingUserId: match.missing_user_id
+      ? Number(match.missing_user_id)
+      : null,
+    reportedPersonImageUrl: match.reported_person_image_url,
+    reportedPersonName: match.reported_person_name,
+    reportedPersonGender: match.reported_person_gender,
+    createdAt: match.created_at,
+  }));
 };
 
 const saveMatches = async (reportId, reportType, matches) => {
@@ -78,7 +99,15 @@ const processReport = async (event) => {
 
     const searchType = reportType === 'MISSING' ? 'FOUND' : 'MISSING';
 
-    const matches = await findMatches(embedding, reportId, searchType);
+    const threshold = 0.6;
+    const matches = await findMatches(
+      embedding,
+      reportId,
+      searchType,
+      threshold,
+    );
+
+    if (!matches?.length) return;
 
     await saveMatches(reportId, reportType, matches);
   } catch (err) {
