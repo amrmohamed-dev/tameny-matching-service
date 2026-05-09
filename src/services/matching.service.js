@@ -1,5 +1,8 @@
 import pool from '../db/pool.js';
 
+const formatConfidencePercentage = (score) =>
+  Number((score * 100).toFixed(1));
+
 const getEmbedding = async (reportId) => {
   const embeddingResult = await pool.query(
     `
@@ -101,7 +104,12 @@ const saveMatches = async (reportId, reportType, matches) => {
 
 const processReport = async (event) => {
   try {
-    const { reportId, reportType } = event;
+    const {
+      reporterUserId: userId,
+      reportId,
+      reportType,
+      reportedPersonImageUrl,
+    } = event;
 
     const embedding = await getEmbedding(reportId);
     if (!embedding) return;
@@ -126,8 +134,60 @@ const processReport = async (event) => {
 
     if (!insertedMatches?.length) return;
 
+    if (reportType === 'MISSING') {
+      const topConfidenceScore =
+        formatConfidencePercentage(matches[0]?.confidenceScore) || 0;
+
+      console.log('[MATCH_FOUND:MISSING_REPORT]', {
+        userId,
+        reportId,
+        totalMatches: matches.length,
+        topConfidenceScore,
+        foundReportImageUrl: matches[0]?.reportedPersonImageUrl || null,
+        matches,
+      });
+
+      return;
+    }
+
+    const matchPayloads = matches.map((match) => {
+      if (!match.missingUserId) return null;
+
+      const confidencePercentage = formatConfidencePercentage(
+        match.confidenceScore,
+      );
+
+      return {
+        userId: match.missingUserId,
+        reportId: match.reportId,
+        totalMatches: 1,
+        topConfidenceScore: confidencePercentage,
+        foundReportImageUrl:
+          match.reportedPersonImageUrl || reportedPersonImageUrl,
+        matches: [
+          {
+            reportId,
+            confidenceScore: confidencePercentage,
+            reportedPersonName: match.reportedPersonName,
+            reportedPersonGender: match.reportedPersonGender,
+            reportedPersonImageUrl:
+              match.reportedPersonImageUrl || reportedPersonImageUrl,
+            createdAt: match.createdAt,
+          },
+        ],
+      };
+    });
+
+    console.log(
+      '[MATCH_FOUND:FOUND_REPORT]',
+      matchPayloads.filter(Boolean),
+    );
   } catch (err) {
     console.error('[MatchingService] Error processing report:', err);
+
+    throw err;
+  }
+};
     throw err;
   }
 };
