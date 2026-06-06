@@ -1,7 +1,7 @@
 {
   "name": "tameny-matching-service",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI-powered real-time matching microservice using Node.js, Express, Socket.IO, pgvector, and event-driven architecture",
   "main": "server.js",
   "type": "module",
   "scripts": {
